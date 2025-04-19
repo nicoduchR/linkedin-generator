@@ -37,9 +37,9 @@ COPY --from=builder /app/package.json /app/
 COPY --from=builder /app/apps/api/package.json /app/
 COPY --from=builder /app/pnpm-lock.yaml /app/
 
-# Install production dependencies without frozen-lockfile
+# Install all dependencies (including dev dependencies since swagger is used in production)
 RUN corepack enable && corepack prepare pnpm@8.14.0 --activate && \
-    pnpm install --prod
+    pnpm install
 
 # Copy built application
 COPY --from=builder /app/apps/api/dist /app/dist
