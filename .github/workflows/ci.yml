@@ -1,14 +1,55 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "development"]
   pull_request:
     types: [opened, synchronize]
 
 jobs:
+  check-changes:
+    name: Check Changed Apps
+    runs-on: ubuntu-latest
+    outputs:
+      web_changed: ${{ steps.changes.outputs.web_changed }}
+      api_changed: ${{ steps.changes.outputs.api_changed }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed apps
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA=${{ github.event.pull_request.base.sha }}
+          else 
+            BASE_SHA=$(git rev-parse HEAD~1)
+          fi
+
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA HEAD)
+
+          if echo "$CHANGED_FILES" | grep -q "^apps/web/"; then
+            echo "web_changed=true" >> $GITHUB_OUTPUT
+          else 
+            echo "web_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^apps/api/"; then
+            echo "api_changed=true" >> $GITHUB_OUTPUT
+          else 
+            echo "api_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Changes detected:"
+          echo "Web changed: $(cat $GITHUB_OUTPUT | grep web_changed | cut -d= -f2)"
+          echo "API changed: $(cat $GITHUB_OUTPUT | grep api_changed | cut -d= -f2)"
+
   build:
     name: Build and Test
+    needs: check-changes
     timeout-minutes: 15
     runs-on: ubuntu-latest
 
@@ -46,4 +87,126 @@ jobs:
         run: pnpm build
 
       - name: Lint
-        run: pnpm lint 
+        run: pnpm lint
+
+      - name: Cache Next.js build
+        uses: actions/cache@v3
+        with:
+          path: apps/web/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/**', 'packages/**') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
+  deploy-api:
+    name: Deploy API
+    needs: [check-changes, build]
+    if: |
+      github.event_name == 'push' && 
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && 
+      needs.check-changes.outputs.api_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Create env file for API
+        run: |
+          cat > .env.api << EOF
+          NODE_ENV=production
+          PORT=3000
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          EOF
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Copy env file to server
+        run: |
+          scp .env.api ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.PROJECT_PATH }}/.env.api
+
+      - name: Deploy API to server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'ENDSSH'
+            # Navigate to project directory
+            cd ${{ secrets.PROJECT_PATH }}
+            
+            # Pull latest changes
+            git pull origin ${{ github.ref_name }}
+            
+            # Stop and remove existing containers
+            docker-compose -f docker-compose.prod.yml stop api
+            docker-compose -f docker-compose.prod.yml rm -f api
+            
+            # Set environment variables
+            cp .env.api apps/api/.env
+            
+            # Build and deploy API container
+            docker-compose -f docker-compose.prod.yml up -d --build api
+            
+            # Clean up old images
+            docker image prune -f
+          ENDSSH
+
+  deploy-web:
+    name: Deploy Web
+    needs: [check-changes, build]
+    if: |
+      github.event_name == 'push' && 
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development') && 
+      needs.check-changes.outputs.web_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Create env file for Web
+        run: |
+          cat > .env.web << EOF
+          NODE_ENV=production
+          PORT=3400
+          NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
+          EOF
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Copy env file to server
+        run: |
+          scp .env.web ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.PROJECT_PATH }}/.env.web
+
+      - name: Deploy Web to server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'ENDSSH'
+            # Navigate to project directory
+            cd ${{ secrets.PROJECT_PATH }}
+            
+            # Pull latest changes
+            git pull origin ${{ github.ref_name }}
+            
+            # Stop and remove existing containers
+            docker-compose -f docker-compose.prod.yml stop web
+            docker-compose -f docker-compose.prod.yml rm -f web
+            
+            # Set environment variables
+            cp .env.web apps/web/.env
+            
+            # Build and deploy Web container
+            docker-compose -f docker-compose.prod.yml up -d --build web
+            
+            # Clean up old images
+            docker image prune -f
+          ENDSSH
