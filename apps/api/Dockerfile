@@ -32,9 +32,17 @@ RUN pnpm run build --filter=api
 FROM node:20-alpine AS production
 WORKDIR /app
 
+# Copy package.json files
+COPY --from=builder /app/package.json /app/
+COPY --from=builder /app/apps/api/package.json /app/
+COPY --from=builder /app/pnpm-lock.yaml /app/
+
+# Install production dependencies
+RUN corepack enable && corepack prepare pnpm@8.14.0 --activate && \
+    pnpm install --prod --frozen-lockfile
+
+# Copy built application
 COPY --from=builder /app/apps/api/dist /app/dist
-COPY --from=builder /app/apps/api/package.json /app/package.json
-COPY --from=builder /app/node_modules /app/node_modules
 
 ENV NODE_ENV=production
 ENV PORT=3000
