@@ -13,17 +13,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages/ ./packages/
 
-# Build argument to control lockfile check
-ARG SKIP_LOCKFILE_CHECK=false
-
 # Install dependencies
 FROM base AS dependencies
-ARG SKIP_LOCKFILE_CHECK
-RUN if [ "$SKIP_LOCKFILE_CHECK" = "true" ]; then \
-      pnpm install --no-frozen-lockfile; \
-    else \
-      pnpm install; \
-    fi
+RUN pnpm install --no-frozen-lockfile
 
 # Development stage
 FROM dependencies AS development
@@ -45,16 +37,8 @@ COPY --from=builder /app/package.json /app/
 COPY --from=builder /app/apps/api/package.json /app/
 COPY --from=builder /app/pnpm-lock.yaml /app/
 
-# Build argument to control lockfile check
-ARG SKIP_LOCKFILE_CHECK
-
-# Install all dependencies (including dev dependencies since swagger is used in production)
-RUN corepack enable && corepack prepare pnpm@8.14.0 --activate && \
-    if [ "$SKIP_LOCKFILE_CHECK" = "true" ]; then \
-      pnpm install --no-frozen-lockfile; \
-    else \
-      pnpm install; \
-    fi
+# Install dependencies
+RUN corepack enable && corepack prepare pnpm@8.14.0 --activate && pnpm install --no-frozen-lockfile
 
 # Copy built application
 COPY --from=builder /app/apps/api/dist /app/dist
