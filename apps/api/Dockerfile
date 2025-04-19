@@ -37,9 +37,9 @@ COPY --from=builder /app/package.json /app/
 COPY --from=builder /app/apps/api/package.json /app/
 COPY --from=builder /app/pnpm-lock.yaml /app/
 
-# Install production dependencies
+# Install production dependencies without frozen-lockfile
 RUN corepack enable && corepack prepare pnpm@8.14.0 --activate && \
-    pnpm install --prod --frozen-lockfile
+    pnpm install --prod
 
 # Copy built application
 COPY --from=builder /app/apps/api/dist /app/dist
