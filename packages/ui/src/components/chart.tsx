@@ -1,3 +1,5 @@
+"use client";
+
 import React, { ReactNode } from "react";
 import { TooltipProps, LegendProps } from "recharts";
 
@@ -13,6 +15,7 @@ export type ChartConfig = Record<
 // Chart Container Component
 interface ChartContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   config: ChartConfig;
+  children: ReactNode;
 }
 
 export const ChartContainer = React.forwardRef<

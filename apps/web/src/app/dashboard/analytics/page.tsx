@@ -10,15 +10,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { MoveUpRight, MoveDownLeft, Trending, BarChart4 } from "lucide-react";
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { MoveUpRight, MoveDownLeft, TrendingUp, BarChart4 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "ui";
 
 import {
   ChartConfig,
@@ -27,17 +20,17 @@ import {
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart";
+} from "ui";
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "ui";
 
 // Sample data for engagement
 const engagementData = [
@@ -235,7 +228,7 @@ export default function AnalyticsPage() {
             Engagement
           </TabsTrigger>
           <TabsTrigger value="growth" className="flex items-center gap-1">
-            <Trending className="w-4 h-4" />
+            <TrendingUp className="w-4 h-4" />
             Follower Growth
           </TabsTrigger>
         </TabsList>
