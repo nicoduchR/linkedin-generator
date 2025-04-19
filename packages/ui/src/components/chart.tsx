@@ -1,7 +1,7 @@
 "use client";
 
-import React, { ReactNode } from "react";
-import { TooltipProps, LegendProps } from "recharts";
+import React, { type ReactNode } from "react";
+import { type TooltipProps, type LegendProps } from "recharts";
 
 // Types for chart configuration
 export type ChartConfig = Record<
@@ -49,7 +49,12 @@ ChartContainer.displayName = "ChartContainer";
 interface ChartTooltipContentProps
   extends React.HTMLAttributes<HTMLDivElement> {
   active?: boolean;
-  payload?: any[];
+  payload?: Array<{
+    color?: string;
+    name?: string;
+    value?: number | string;
+    [key: string]: unknown;
+  }>;
   label?: string;
   labelFormatter?: (label: string) => React.ReactNode;
 }
