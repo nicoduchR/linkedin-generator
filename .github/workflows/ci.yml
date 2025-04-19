@@ -143,8 +143,9 @@ jobs:
               docker compose -f docker-compose.prod.yml rm -f api
             fi
             
-            # Build and deploy API container using the env file
-            docker compose -f docker-compose.prod.yml --env-file .env.api up -d --build api
+            # Build and deploy API container using the env file with build args
+            DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml --env-file .env.api build --build-arg SKIP_LOCKFILE_CHECK=true api
+            docker compose -f docker-compose.prod.yml --env-file .env.api up -d api
             
             # Clean up old images
             docker image prune -f
@@ -199,8 +200,9 @@ jobs:
               docker compose -f docker-compose.prod.yml rm -f web
             fi
             
-            # Build and deploy Web container using the env file
-            docker compose -f docker-compose.prod.yml --env-file .env.web up -d --build web
+            # Build and deploy Web container using the env file with build args
+            DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml --env-file .env.web build --build-arg SKIP_LOCKFILE_CHECK=true web
+            docker compose -f docker-compose.prod.yml --env-file .env.web up -d web
             
             # Clean up old images
             docker image prune -f
