@@ -10,3 +10,4 @@ export * from "./components/textarea";
 export * from "./components/slider";
 export * from "./components/select";
 export * from "./components/badge";
+export * from "./components/dropdown-menu";

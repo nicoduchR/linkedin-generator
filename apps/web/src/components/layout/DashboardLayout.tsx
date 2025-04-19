@@ -11,6 +11,7 @@ import {
   Columns,
   Calendar,
   LogOut,
+  BookOpen,
 } from "lucide-react";
 
 type SidebarNavProps = {
@@ -34,6 +35,11 @@ const links: SidebarLink[] = [
     label: "My Posts",
     href: "/dashboard/posts",
     icon: FileText,
+  },
+  {
+    label: "Anecdotes",
+    href: "/dashboard/anecdotes",
+    icon: BookOpen,
   },
   {
     label: "Generate",
