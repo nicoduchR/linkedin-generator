@@ -113,25 +113,28 @@ jobs:
 
       - name: Create env file and deploy API to server
         run: |
-          REF_NAME="${{ github.ref_name }}"
-          DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          # Create API environment file locally
+          cat > .env.api << EOF
+          NODE_ENV=production
+          PORT=3000
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          EOF
+
           # Disable strict host key checking for this connection
           mkdir -p ~/.ssh
           echo "Host ${{ secrets.SERVER_IP }}" > ~/.ssh/config
           echo "  StrictHostKeyChecking no" >> ~/.ssh/config
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << "ENDSSH"
+
+          # Copy env file to server
+          scp .env.api ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/home/azureuser/linkedin-generator/.env.api
+
+          # Deploy API
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'ENDSSH'
             # Navigate to project directory
             cd /home/azureuser/linkedin-generator
             
-            # Create environment file directly on server
-            cat > /home/azureuser/linkedin-generator/.env.api << EOFENV
-            NODE_ENV=production
-            PORT=3000
-            DATABASE_URL=${DATABASE_URL}
-            EOFENV
-            
             # Pull latest changes
-            git pull origin ${REF_NAME}
+            git pull origin ${{ github.ref_name }}
             
             # Check if API container exists and is running before stopping
             if docker ps -a | grep -q api; then
@@ -166,25 +169,28 @@ jobs:
 
       - name: Create env file and deploy Web to server
         run: |
-          REF_NAME="${{ github.ref_name }}"
-          API_URL="${{ secrets.API_URL }}"
+          # Create Web environment file locally
+          cat > .env.web << EOF
+          NODE_ENV=production
+          PORT=3400
+          NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
+          EOF
+
           # Disable strict host key checking for this connection
           mkdir -p ~/.ssh
           echo "Host ${{ secrets.SERVER_IP }}" > ~/.ssh/config
           echo "  StrictHostKeyChecking no" >> ~/.ssh/config
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << "ENDSSH"
+
+          # Copy env file to server
+          scp .env.web ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/home/azureuser/linkedin-generator/.env.web
+
+          # Deploy Web
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'ENDSSH'
             # Navigate to project directory
             cd /home/azureuser/linkedin-generator
             
-            # Create environment file directly on server
-            cat > /home/azureuser/linkedin-generator/.env.web << EOFENV
-            NODE_ENV=production
-            PORT=3400
-            NEXT_PUBLIC_API_URL=${API_URL}
-            EOFENV
-            
             # Pull latest changes
-            git pull origin ${REF_NAME}
+            git pull origin ${{ github.ref_name }}
             
             # Check if Web container exists and is running before stopping
             if docker ps -a | grep -q web; then
