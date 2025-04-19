@@ -96,36 +96,27 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Create env file for API
-        run: |
-          cat > .env.api << EOF
-          NODE_ENV=production
-          PORT=3000
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          EOF
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Add server to known hosts
+      - name: Create env file and deploy API to server
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-
-      - name: Copy env file to server
-        run: |
-          scp .env.api ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.PROJECT_PATH }}/.env.api
-
-      - name: Deploy API to server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'ENDSSH'
+          REF_NAME="${{ github.ref_name }}"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << "ENDSSH"
             # Navigate to project directory
             cd /home/azureuser/linkedin-generator
             
+            # Create environment file directly on server
+            cat > /home/azureuser/linkedin-generator/.env.api << EOF
+            NODE_ENV=production
+            PORT=3000
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            EOF
+            
             # Pull latest changes
-            git pull origin ${{ github.ref_name }}
+            git pull origin ${REF_NAME}
             
             # Stop and remove existing containers
             docker-compose -f docker-compose.prod.yml stop api
@@ -153,36 +144,27 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Create env file for Web
-        run: |
-          cat > .env.web << EOF
-          NODE_ENV=production
-          PORT=3400
-          NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
-          EOF
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Add server to known hosts
+      - name: Create env file and deploy Web to server
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-
-      - name: Copy env file to server
-        run: |
-          scp .env.web ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:${{ secrets.PROJECT_PATH }}/.env.web
-
-      - name: Deploy Web to server
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'ENDSSH'
+          REF_NAME="${{ github.ref_name }}"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << "ENDSSH"
             # Navigate to project directory
             cd /home/azureuser/linkedin-generator
             
+            # Create environment file directly on server
+            cat > /home/azureuser/linkedin-generator/.env.web << EOF
+            NODE_ENV=production
+            PORT=3400
+            NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
+            EOF
+            
             # Pull latest changes
-            git pull origin ${{ github.ref_name }}
+            git pull origin ${REF_NAME}
             
             # Stop and remove existing containers
             docker-compose -f docker-compose.prod.yml stop web
