@@ -5,17 +5,21 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      target: deps
+    command: pnpm dev --filter=api
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/linkedin_generator
       - LINKEDIN_CLIENT_ID=your_linkedin_client_id
       - LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
       - LINKEDIN_CALLBACK_URL=http://localhost:3000/api/auth/callback/linkedin
+    volumes:
+      - .:/app
+      - /app/node_modules
     depends_on:
       - postgres
-    restart: unless-stopped
     networks:
       - app-network
 
@@ -23,14 +27,18 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      target: deps
+    command: pnpm dev --filter=web
     ports:
       - "3400:3400"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:3000
+    volumes:
+      - .:/app
+      - /app/node_modules
     depends_on:
       - api
-    restart: unless-stopped
     networks:
       - app-network
 
@@ -46,7 +54,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
-    restart: unless-stopped
 
 networks:
   app-network:

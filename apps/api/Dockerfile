@@ -1,51 +1,42 @@
 FROM node:20-alpine AS base
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@8.14.0 --activate
+RUN npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
 
-# Copy root package.json and pnpm files
+# Install dependencies (only needed packages)
+FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-
-# Copy the api package.json
 COPY apps/api/package.json ./apps/api/package.json
-COPY packages/ ./packages/
 
-# Install dependencies
-FROM base AS dependencies
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
-# Development stage
-FROM dependencies AS development
+# Build the app
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-WORKDIR /app
-CMD ["pnpm", "dev:api"]
 
-# Builder stage for production
-FROM dependencies AS builder
-COPY . .
-RUN pnpm run build --filter=api
+# Build the application
+RUN pnpm build --filter=api
 
-# Production stage
-FROM node:20-alpine AS production
-WORKDIR /app
+# Production image
+FROM base AS runner
+ENV NODE_ENV production
 
-# Copy package.json files
-COPY --from=builder /app/package.json /app/
-COPY --from=builder /app/apps/api/package.json /app/
-COPY --from=builder /app/pnpm-lock.yaml /app/
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
 
-# Install dependencies
-RUN corepack enable && corepack prepare pnpm@8.14.0 --activate && pnpm install --no-frozen-lockfile
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=deps /app/node_modules ./node_modules
 
-# Copy built application
-COPY --from=builder /app/apps/api/dist /app/dist
-
-ENV NODE_ENV=production
-ENV PORT=3000
+USER nestjs
 
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"] 
+# Set the correct hostname
+ENV HOST 0.0.0.0
+ENV PORT 3000
+
+CMD ["node", "apps/api/dist/main"] 

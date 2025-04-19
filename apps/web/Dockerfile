@@ -1,47 +1,46 @@
 FROM node:20-alpine AS base
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@8.14.0 --activate
+RUN npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
 
-# Copy root package.json and pnpm files
+# Install dependencies (only needed packages)
+FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-
-# Copy the web package.json
 COPY apps/web/package.json ./apps/web/package.json
-COPY packages/ ./packages/
+COPY packages/ui/package.json ./packages/ui/package.json
+COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY packages/tsconfig/package.json ./packages/tsconfig/package.json
 
-# Install dependencies
-FROM base AS dependencies
 RUN pnpm install --frozen-lockfile
 
-# Development stage
-FROM dependencies AS development
+# Build the app
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-WORKDIR /app
-ENV NEXT_PUBLIC_API_URL=http://localhost:3000/api
-CMD ["pnpm", "dev:web"]
 
-# Builder stage for production
-FROM dependencies AS builder
-COPY . .
-ENV NEXT_PUBLIC_API_URL=https://your-api-url.com/api
-RUN pnpm run build --filter=web
+# Build the application
+RUN pnpm build --filter=web
 
-# Production stage
-FROM node:20-alpine AS production
-WORKDIR /app
+# Production image
+FROM base AS runner
+ENV NODE_ENV production
 
-COPY --from=builder /app/apps/web/.next /app/.next
-COPY --from=builder /app/apps/web/public /app/public
-COPY --from=builder /app/apps/web/package.json /app/package.json
-COPY --from=builder /app/node_modules /app/node_modules
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-ENV NODE_ENV=production
-ENV PORT=3400
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+
+USER nextjs
 
 EXPOSE 3400
 
-CMD ["node_modules/.bin/next", "start", "-p", "3400"] 
+ENV PORT 3400
+# Set the correct base path
+ENV HOSTNAME "0.0.0.0"
+
+CMD ["node", "apps/web/server.js"] 
