@@ -114,6 +114,7 @@ jobs:
       - name: Create env file and deploy API to server
         run: |
           REF_NAME="${{ github.ref_name }}"
+          DATABASE_URL="${{ secrets.DATABASE_URL }}"
           # Disable strict host key checking for this connection
           mkdir -p ~/.ssh
           echo "Host ${{ secrets.SERVER_IP }}" > ~/.ssh/config
@@ -123,11 +124,11 @@ jobs:
             cd /home/azureuser/linkedin-generator
             
             # Create environment file directly on server
-            cat > /home/azureuser/linkedin-generator/.env.api << EOF
+            cat > /home/azureuser/linkedin-generator/.env.api << EOFENV
             NODE_ENV=production
             PORT=3000
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            EOF
+            DATABASE_URL=${DATABASE_URL}
+            EOFENV
             
             # Pull latest changes
             git pull origin ${REF_NAME}
@@ -166,6 +167,7 @@ jobs:
       - name: Create env file and deploy Web to server
         run: |
           REF_NAME="${{ github.ref_name }}"
+          API_URL="${{ secrets.API_URL }}"
           # Disable strict host key checking for this connection
           mkdir -p ~/.ssh
           echo "Host ${{ secrets.SERVER_IP }}" > ~/.ssh/config
@@ -175,11 +177,11 @@ jobs:
             cd /home/azureuser/linkedin-generator
             
             # Create environment file directly on server
-            cat > /home/azureuser/linkedin-generator/.env.web << EOF
+            cat > /home/azureuser/linkedin-generator/.env.web << EOFENV
             NODE_ENV=production
             PORT=3400
-            NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
-            EOF
+            NEXT_PUBLIC_API_URL=${API_URL}
+            EOFENV
             
             # Pull latest changes
             git pull origin ${REF_NAME}
