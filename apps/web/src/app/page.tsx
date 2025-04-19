@@ -84,6 +84,11 @@ function TestimonialCard({
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
+      {/* API Status
+      <div className="container mx-auto px-4 py-4 md:px-6">
+        <ApiStatus />
+      </div> */}
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-background to-background/80 py-24 md:py-32">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
@@ -191,6 +196,7 @@ export default function Home() {
                     </div>
                     <div className="space-y-3 rounded-lg bg-background p-4 shadow-sm">
                       <div className="h-4 w-3/4 rounded-full bg-gray-200" />
+
                       <div className="h-4 w-5/6 rounded-full bg-gray-200" />
                       <div className="h-4 w-2/3 rounded-full bg-gray-200" />
                       <div className="h-4 w-4/5 rounded-full bg-gray-200" />
