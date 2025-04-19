@@ -133,15 +133,15 @@ jobs:
             # Pull latest changes
             git pull origin ${REF_NAME}
             
-            # Stop and remove existing containers
-            docker-compose -f docker-compose.prod.yml stop api
-            docker-compose -f docker-compose.prod.yml rm -f api
+            # Check if API container exists and is running before stopping
+            if docker ps -a | grep -q api; then
+              # Stop and remove existing containers
+              docker compose -f docker-compose.prod.yml stop api
+              docker compose -f docker-compose.prod.yml rm -f api
+            fi
             
-            # Set environment variables
-            cp .env.api apps/api/.env
-            
-            # Build and deploy API container
-            docker-compose -f docker-compose.prod.yml up -d --build api
+            # Build and deploy API container using the env file
+            docker compose -f docker-compose.prod.yml --env-file .env.api up -d --build api
             
             # Clean up old images
             docker image prune -f
@@ -186,15 +186,15 @@ jobs:
             # Pull latest changes
             git pull origin ${REF_NAME}
             
-            # Stop and remove existing containers
-            docker-compose -f docker-compose.prod.yml stop web
-            docker-compose -f docker-compose.prod.yml rm -f web
+            # Check if Web container exists and is running before stopping
+            if docker ps -a | grep -q web; then
+              # Stop and remove existing containers
+              docker compose -f docker-compose.prod.yml stop web
+              docker compose -f docker-compose.prod.yml rm -f web
+            fi
             
-            # Set environment variables
-            cp .env.web apps/web/.env
-            
-            # Build and deploy Web container
-            docker-compose -f docker-compose.prod.yml up -d --build web
+            # Build and deploy Web container using the env file
+            docker compose -f docker-compose.prod.yml --env-file .env.web up -d --build web
             
             # Clean up old images
             docker image prune -f
