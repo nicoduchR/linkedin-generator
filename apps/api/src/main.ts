@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule);
 
   // Enable CORS
   app.enableCors();
@@ -22,8 +23,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Get port from environment variable or use default
-  const port = process.env.PORT || 3000;
+  // Get configuration
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT') || 3001;
 
   await app.listen(port);
   logger.log(`Application is running on: http://localhost:${port}/api`);
@@ -31,4 +33,5 @@ async function bootstrap() {
     `Swagger documentation available at: http://localhost:${port}/api/docs`,
   );
 }
+// Add void to explicitly mark this promise as ignored
 void bootstrap();
